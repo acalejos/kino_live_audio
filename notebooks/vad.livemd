@@ -1,20 +1,30 @@
 <!-- livebook:{"app_settings":{"access_type":"public","output_type":"rich","show_source":true,"slug":"vad"}} -->
 
-# Nx VAD
+# Nx Voice-Activity Detection
 
 ```elixir
 Mix.install([
   {:ortex, "~> 0.1.9"},
   {:kino_vega_lite, "~> 0.1.10"},
-  {:kino_live_audio, "~> 0.1"}
+  {:kino_live_audio, "~> 0.1"},
+  {:req, "~> 0.4"}
 ])
 ```
 
 ## Setup Model & Plot
 
 ```elixir
-sample_rate = 16_000
-model = Ortex.load("/Users/andres/Downloads/Silero_VAD.onnx")
+url = "https://raw.githubusercontent.com/snakers4/silero-vad/master/files/silero_vad.onnx"
+filename = url |> String.split("/") |> Enum.reverse() |> hd
+
+resp =
+  Req.get!(
+    url,
+    decode_body: false,
+    into: File.stream!(filename)
+  )
+
+model = Ortex.load(filename)
 
 chart =
   VegaLite.new(title: "Voice-Activated Detection", width: 800, height: 400)
@@ -33,7 +43,29 @@ chart =
 ```
 
 ```elixir
-liveAudio = KinoLiveAudio.new(chunk_size: 30, unit: :ms, sample_rate: sample_rate)
+chunk_size = Kino.Input.text("Chunk Size", default: "1")
+sample_rate = Kino.Input.text("Sample Rate", default: "16000")
+
+unit =
+  Kino.Input.select(
+    "Unit",
+    [samples: "Samples", s: "Seconds", ms: "Miliseconds", mu: "Microseconds"],
+    default: :s
+  )
+
+clear = Kino.Control.button("Clear Plot")
+clear |> Kino.listen(fn _ -> Kino.VegaLite.clear(chart) end)
+top_row = Kino.Layout.grid([sample_rate, chunk_size, unit], columns: 3)
+Kino.Layout.grid([top_row, clear])
+```
+
+```elixir
+liveAudio =
+  KinoLiveAudio.new(
+    chunk_size: Kino.Input.read(chunk_size) |> Integer.parse() |> elem(0),
+    unit: Kino.Input.read(unit),
+    sample_rate: Kino.Input.read(sample_rate) |> Integer.parse() |> elem(0)
+  )
 ```
 
 ```elixir
@@ -42,7 +74,7 @@ liveAudio
 |> Kino.listen(fn
   %{event: :audio_chunk, chunk: data} ->
     input = Nx.tensor(data) |> Nx.stack()
-    sr = Nx.tensor(sample_rate, type: :s64)
+    sr = Nx.tensor(Kino.Input.read(sample_rate) |> Integer.parse() |> elem(0), type: :s64)
     seconds_sampled = Nx.shape(input) |> elem(0)
     h = Nx.broadcast(0.0, {2, seconds_sampled, 64})
     c = Nx.broadcast(0.0, {2, seconds_sampled, 64})
