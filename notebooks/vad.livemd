@@ -1,0 +1,54 @@
+<!-- livebook:{"app_settings":{"access_type":"public","output_type":"rich","show_source":true,"slug":"vad"}} -->
+
+# Nx VAD
+
+```elixir
+Mix.install([
+  {:ortex, "~> 0.1.9"},
+  {:kino_vega_lite, "~> 0.1.10"},
+  {:kino_live_audio, "~> 0.1"}
+])
+```
+
+## Setup Model & Plot
+
+```elixir
+sample_rate = 16_000
+model = Ortex.load("/Users/andres/Downloads/Silero_VAD.onnx")
+
+chart =
+  VegaLite.new(title: "Voice-Activated Detection", width: 800, height: 400)
+  |> VegaLite.mark(:line)
+  |> VegaLite.encode_field(:x, "x",
+    type: :quantitative,
+    title: "Time",
+    axis: [ticks: false, domain: false, grid: false, labels: false]
+  )
+  |> VegaLite.encode_field(:y, "y",
+    type: :quantitative,
+    title: "Voice",
+    scale: [domain_max: 1, domain_min: 0]
+  )
+  |> Kino.VegaLite.new()
+```
+
+```elixir
+liveAudio = KinoLiveAudio.new(chunk_size: 30, unit: :ms, sample_rate: sample_rate)
+```
+
+```elixir
+liveAudio
+|> Kino.Control.stream()
+|> Kino.listen(fn
+  %{event: :audio_chunk, chunk: data} ->
+    input = Nx.tensor(data) |> Nx.stack()
+    sr = Nx.tensor(sample_rate, type: :s64)
+    seconds_sampled = Nx.shape(input) |> elem(0)
+    h = Nx.broadcast(0.0, {2, seconds_sampled, 64})
+    c = Nx.broadcast(0.0, {2, seconds_sampled, 64})
+    {output, _hn, _cn} = Ortex.run(model, {input, sr, h, c})
+    [output] = Nx.to_list(output |> Nx.flatten())
+    row = %{x: :os.system_time(), y: output}
+    Kino.VegaLite.push(chart, row, window: 1000)
+end)
+```
