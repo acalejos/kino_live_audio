@@ -12,7 +12,7 @@ defmodule KinoLiveAudio do
   use Kino.JS, assets_path: "lib/assets/build"
   use Kino.JS.Live
 
-  @exps [s: -1, ms: -3, mu: -6]
+  @exps [s: 0, ms: -3, mu: -6]
 
   @doc """
   Creates a new `KinoLiveAudio`
