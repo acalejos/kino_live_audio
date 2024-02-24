@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.button-gray {
+    --tw-border-opacity: 1;
+    border-color: rgb(225 232 240 / var(--tw-border-opacity));
+    --tw-bg-opacity: 1;
+    background-color: rgb(240 245 249 / var(--tw-bg-opacity));
+    --tw-text-opacity: 1;
+    color: rgb(68 86 104 / var(--tw-text-opacity));
+}
+
+.button-base {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    border-radius: 0.5rem;
+    border-width: 1px;
+    border-color: transparent;
+    padding: 0.5rem 1.25rem;
+    font-size: .875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+}
