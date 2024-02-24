@@ -35,7 +35,7 @@ defmodule KinoLiveAudio.MixProject do
   defp deps do
     [
       {:kino, "~> 0.12"},
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
+      {:ex_doc, ">= 0.0.0", only: :docs, runtime: false}
     ]
   end
 
