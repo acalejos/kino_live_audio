@@ -12,6 +12,10 @@ defmodule KinoLiveAudio.MixProject do
         "A Kino designed to record a raw audio stream (no client-side encoding) and emit events.",
       source_url: "https://github.com/acalejos/kino_live_audio",
       package: package(),
+      preferred_cli_env: [
+        docs: :docs,
+        "hex.publish": :docs
+      ],
       docs: docs()
     ]
   end
