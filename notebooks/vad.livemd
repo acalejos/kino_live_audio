@@ -71,16 +71,15 @@ liveAudio =
 ```elixir
 liveAudio
 |> Kino.Control.stream()
-|> Kino.listen(fn
-  %{event: :audio_chunk, chunk: data} ->
+|> Kino.listen({Nx.broadcast(0.0, {2, 1, 64}), Nx.broadcast(0.0, {2, 1, 64})}, fn
+  %{event: :audio_chunk, chunk: data}, {hn, cn} ->
     input = Nx.tensor(data) |> Nx.stack()
     sr = Nx.tensor(Kino.Input.read(sample_rate) |> Integer.parse() |> elem(0), type: :s64)
-    seconds_sampled = Nx.shape(input) |> elem(0)
-    h = Nx.broadcast(0.0, {2, seconds_sampled, 64})
-    c = Nx.broadcast(0.0, {2, seconds_sampled, 64})
-    {output, _hn, _cn} = Ortex.run(model, {input, sr, h, c})
+    {input, sr, hn, cn}
+    {output, hn, cn} = Ortex.run(model, {input, sr, hn, cn})
     [output] = Nx.to_list(output |> Nx.flatten())
     row = %{x: :os.system_time(), y: output}
     Kino.VegaLite.push(chart, row, window: 1000)
+    {:cont, {hn, cn}}
 end)
 ```
