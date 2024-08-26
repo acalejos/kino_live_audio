@@ -14,7 +14,13 @@ Mix.install([
 ## Setup Model & Plot
 
 ```elixir
-url = "https://raw.githubusercontent.com/snakers4/silero-vad/master/files/silero_vad.onnx"
+# This is for v5 which uses a new architecture
+# url =
+#   "https://raw.githubusercontent.com/snakers4/silero-vad/master/src/silero_vad/data/silero_vad.onnx"
+
+# This is for v4
+url = "https://raw.githubusercontent.com/snakers4/silero-vad/v4.0stable/files/silero_vad.onnx"
+
 filename = url |> String.split("/") |> Enum.reverse() |> hd
 
 resp =
@@ -69,13 +75,13 @@ liveAudio =
 ```
 
 ```elixir
+sr = Kino.Input.read(sample_rate)
 liveAudio
 |> Kino.Control.stream()
 |> Kino.listen({Nx.broadcast(0.0, {2, 1, 64}), Nx.broadcast(0.0, {2, 1, 64})}, fn
   %{event: :audio_chunk, chunk: data}, {hn, cn} ->
-    input = Nx.tensor(data) |> Nx.stack()
-    sr = Nx.tensor(Kino.Input.read(sample_rate) |> Integer.parse() |> elem(0), type: :s64)
-    {input, sr, hn, cn}
+    input = Nx.tensor([data])
+    sr = Nx.tensor(sr |> Integer.parse() |> elem(0), type: :s64)
     {output, hn, cn} = Ortex.run(model, {input, sr, hn, cn})
     [output] = Nx.to_list(output |> Nx.flatten())
     row = %{x: :os.system_time(), y: output}
