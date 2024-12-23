@@ -5,13 +5,14 @@ export default function App({ ctx, payload }) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioContext, setAudioContext] = useState(null);
   const [pcmNode, setPcmNode] = useState(null);
+  const [mediaStreamSource, setMediaStreamSource] = useState(null);
 
   // Initialize AudioContext and AudioWorklet
   useEffect(() => {
     const initAudioContext = async () => {
       if (!window.AudioContext) return;
       const context = new AudioContext({ sampleRate: payload.sampleRate });
-      console.log;
+
       await context.audioWorklet.addModule("./pcm-processor.js");
       const node = new AudioWorkletNode(context, "pcm-processor", {
         processorOptions: { chunkSize: payload.chunkSize },
@@ -38,15 +39,27 @@ export default function App({ ctx, payload }) {
     source.connect(pcmNode);
     pcmNode.connect(audioContext.destination); // Necessary but doesn't output sound to speakers
 
+    ctx.pushEvent("start_audio");
+    setMediaStreamSource(source);
     setIsRecording(true);
   };
 
   const stopRecording = () => {
     if (!audioContext || !isRecording) return;
 
-    audioContext.close();
+    // Disconnect the nodes and stop the media stream
+    if (mediaStreamSource) {
+      mediaStreamSource.disconnect();
+      pcmNode.disconnect();
+      const tracks = mediaStreamSource.mediaStream.getTracks();
+      tracks.forEach((track) => track.stop());
+    }
+
+    ctx.pushEvent("stop_audio");
+    setMediaStreamSource(null);
     setIsRecording(false);
   };
+
   return (
     <div>
       {!isRecording && <RecordButton />}
